@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.huyaoyu.testauthenticator.MainActivity">
+
+    <TextView
+        android:id="@+id/text_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Please go to Settings/Accounts to register and authorize a user!"
+        android:textSize="30sp"
+        />
+
+    <Button
+        android:id="@+id/button_get_auth_token"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Get auth token"
+        android:textSize="30sp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/text_main"/>
+
+    <TextView
+        android:id="@+id/text_main_auth_token"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="Auth token:"
+        android:textSize="30sp"
+        android:layout_below="@id/button_get_auth_token"/>
+
+</RelativeLayout>

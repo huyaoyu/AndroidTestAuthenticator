@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<account-authenticator
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accountType="@string/account_type"
+    android:icon="@drawable/oauth2"
+    android:smallIcon="@drawable/oauth2"
+    android:label="@string/account_auth_label"
+    >
+
+</account-authenticator>

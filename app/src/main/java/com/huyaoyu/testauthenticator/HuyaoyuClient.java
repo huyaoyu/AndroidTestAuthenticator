@@ -13,7 +13,7 @@ import retrofit2.http.POST;
 public interface HuyaoyuClient {
 
     @Headers({
-            "Content-Type': 'application/x-www-form-urlencoded",
+            "Content-Type: application/x-www-form-urlencoded",
             "Accept: application/json"
     })
     @POST("o/token/")
@@ -24,5 +24,18 @@ public interface HuyaoyuClient {
             @Field("client_secret") String clientSecret,
             @Field("code") String code,
             @Field("redirect_uri") String redirectUri
+    );
+
+    @Headers({
+            "Content-Type: application/x-www-form-urlencoded",
+            "Accept: application/json"
+    })
+    @POST("o/token/")
+    @FormUrlEncoded
+    Call<AccessToken> refreshAccessToken(
+            @Field("grant_type") String grantType,
+            @Field("client_id") String clientID,
+            @Field("client_secret") String clientSecret,
+            @Field("refresh_token") String refreshToken
     );
 }

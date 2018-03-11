@@ -186,13 +186,7 @@ public class LoginActivity extends AccountAuthenticatorActivity implements Loade
         if (uri != null && uri.toString().startsWith(mRedirectUri)) {
             String code = uri.getQueryParameter("code");
 
-            Retrofit.Builder builder = new Retrofit.Builder()
-                    .baseUrl(mRemoteHost)
-                    .addConverterFactory(GsonConverterFactory.create());
-
-            Retrofit retrofit = builder.build();
-
-            HuyaoyuClient client = retrofit.create(HuyaoyuClient.class);
+            HuyaoyuClient client = RetrofitServiceGenerator.createService(HuyaoyuClient.class);
 
             Call<AccessToken> accessTokenCall =
                     client.getAccessToken("authorization_code", mClientId, mClientSecret, code, mRedirectUri);
@@ -225,8 +219,13 @@ public class LoginActivity extends AccountAuthenticatorActivity implements Loade
                     bundle.putString("Scope", scope);
                     bundle.putString("Email", mStringEmail);
 
+                    // Get the current time stamp.
+                    long currentTimeStamp = System.currentTimeMillis();
+                    bundle.putString("TimeStamp", String.valueOf(currentTimeStamp));
+
                     mAccountManager.addAccountExplicitly(account, mStringPassword, bundle);
                     mAccountManager.setAuthToken(account, tokenType, accessToken);
+//                    mAccountManager.notifyAccountAuthenticated(account);
 
                     Toast.makeText(LoginActivity.this,
                             "Access token obtained for " + mStringUserName + "!",

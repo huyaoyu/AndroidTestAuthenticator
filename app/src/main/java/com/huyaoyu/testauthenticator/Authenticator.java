@@ -73,7 +73,7 @@ public class Authenticator extends AbstractAccountAuthenticator {
         }
     }
 
-    private Bundle  refreshTokenFunc(AccountManager am, Account account) {
+    private Bundle refreshTokenFunc(AccountManager am, Account account) {
         // Try to obtain a new token.
 
         String refreshToken = am.getUserData(account, "RefreshToken");

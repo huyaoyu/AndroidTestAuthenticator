@@ -4,7 +4,10 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
+import android.accounts.AuthenticatorException;
+import android.accounts.OperationCanceledException;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -12,14 +15,14 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+
 public class MainActivity extends AppCompatActivity {
 
     private AccountManager mAccountManager;
     private TextView mTextViewAuthToken;
     private String mAuthToken;
-    private String mAccountType;
     private String mUserName;
-    private String mRefreshToken;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,119 +34,99 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button_get_auth_token).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getTokenForAccountCreateIfNeeded(getResources().getString(R.string.account_type), "Bearer");
+                Bundle bundle = new Bundle();
+
+                bundle.putString(AccountManager.KEY_ACCOUNT_TYPE, getResources().getString(R.string.account_type));
+                bundle.putString("AuthTokenType", "Bearer");
+
+                new GetAuthTokenTask().execute(bundle);
             }
         });
 
         mTextViewAuthToken = findViewById(R.id.text_main_auth_token);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private class GetAuthTokenTask extends AsyncTask<Bundle, Void, Bundle> {
+        @Override
+        protected Bundle doInBackground(Bundle... bundles) {
+            // Retrieve the strings.
+            Bundle bnd = bundles[0];
+            String accountType = bnd.getString(AccountManager.KEY_ACCOUNT_TYPE);
+            String authTokenType = bnd.getString("AuthTokenType");
 
-        Intent intent = getIntent();
+            // Find the account.
+            final Account[] accountArray = mAccountManager.getAccountsByType(accountType);
 
-        String authToken = null;
+            String authToken = null;
+            Bundle result = new Bundle();
 
-        try {
-            authToken = intent.getExtras().getString("AuthToken");
-        } catch (java.lang.NullPointerException e) {
-            // Do nothing.
+            if (accountArray.length == 0) {
+                showMessage("No accounts found.");
+            } else {
+                // Get an authToken by using blockingGetAuthToken().
+
+                try {
+                    authToken = mAccountManager.blockingGetAuthToken(accountArray[0],
+                            authTokenType, false);
+                } catch (AuthenticatorException ae) {
+                    ae.printStackTrace();
+                } catch (OperationCanceledException oce) {
+                    oce.printStackTrace();
+                } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                }
+
+                if ( null == authToken ) {
+                    return result;
+                }
+
+                if (true == Authenticator.isAuthTokenExpired(mAccountManager, accountArray[0], 600)) {
+                    showMessage("authToken is expired.");
+
+                    mAccountManager.invalidateAuthToken(accountType, authToken);
+
+                    try {
+                        authToken = mAccountManager.blockingGetAuthToken(accountArray[0],
+                                authTokenType, false);
+                    } catch (AuthenticatorException ae) {
+                        ae.printStackTrace();
+                    } catch (OperationCanceledException oce) {
+                        oce.printStackTrace();
+                    } catch (IOException ioe) {
+                        ioe.printStackTrace();
+                    }
+
+                    if ( null == authToken ) {
+                        return result;
+                    }
+                }
+
+                result.putString(AccountManager.KEY_AUTHTOKEN, authToken);
+                result.putString(AccountManager.KEY_ACCOUNT_NAME, accountArray[0].name);
+            }
+
+            return result;
         }
 
-        if ( authToken != null ) {
-            mAuthToken = authToken;
-            mUserName = intent.getExtras().getString("UserName");
-            mAccountType = intent.getExtras().getString("AccountType");
-            mRefreshToken = intent.getExtras().getString("RefreshToken");
+        @Override
+        protected void onPostExecute(Bundle bundle) {
+            super.onPostExecute(bundle);
 
-            showMessage(( (mAuthToken != null) ? "Auth token: " + mAuthToken + "\nRefresh token: " + mRefreshToken: "Failed." ));
+            // Retrieve the authToken and userName strings.
+            String authToken = bundle.getString(AccountManager.KEY_AUTHTOKEN);
+            String userName  = bundle.getString(AccountManager.KEY_ACCOUNT_NAME);
 
-            mTextViewAuthToken.setText(
-                    "Auth token: " + mAuthToken
-                            + "\nRefresh Token: " + mRefreshToken
-                            + "\nUser name: " + mUserName);
-        } else {
-            mTextViewAuthToken.setText("onResume(): Null authToken.");
-        }
-    }
+            // Update the UI and save the data.
+            if ( null != authToken && null != userName ) {
+                mAuthToken = authToken;
+                mUserName  = userName;
 
-    private void getTokenForAccountCreateIfNeeded(String accountType, String authTokenType) {
-
-        final Account[] accountArray = mAccountManager.getAccountsByType(accountType);
-
-        if ( accountArray.length == 0 ) {
-            showMessage("No accounts found.");
-        } else {
-
-            final AccountManagerFuture<Bundle> future =
-                    mAccountManager.getAuthToken(
-                            accountArray[0],
-                            authTokenType,
-                            null,
-                            false,
-                            new AccountManagerCallback<Bundle>() {
-                                @Override
-                                public void run(AccountManagerFuture<Bundle> future) {
-                                    Bundle bnd = null;
-
-                                    try {
-                                        bnd = future.getResult();
-                                        mAuthToken = bnd.getString(AccountManager.KEY_AUTHTOKEN);
-                                        mAccountType = bnd.getString(AccountManager.KEY_ACCOUNT_TYPE);
-                                        mUserName  = bnd.getString(AccountManager.KEY_ACCOUNT_NAME);
-                                        mRefreshToken = mAccountManager.getUserData(accountArray[0], "RefreshToken");
-
-                                        final Intent intent = new Intent(MainActivity.this, MainActivity.class);
-
-                                        intent.putExtra("AuthToken", mAuthToken);
-                                        intent.putExtra("AccountType", mAccountType);
-                                        intent.putExtra("UserName", mUserName);
-                                        intent.putExtra("RefreshToken", mRefreshToken);
-
-                                        startActivity(intent);
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-
-                                        showMessage(e.getMessage());
-                                    }
-                                }
-                            },
-                            null
-                    );
-
-//            if ( true == Authenticator.isAuthTokenExpired(mAccountManager, accountArray[0], 600) ) {
-//                mAccountManager.invalidateAuthToken(mAccountType, mAuthToken);
-//
-//                showMessage("Token expired.");
-//
-//                final AccountManagerFuture<Bundle> future2 =
-//                        mAccountManager.getAuthToken(
-//                                accountArray[0],
-//                                authTokenType,
-//                                null,
-//                                false,
-//                                new AccountManagerCallback<Bundle>() {
-//                                    @Override
-//                                    public void run(AccountManagerFuture<Bundle> future) {
-//                                        Bundle bnd = null;
-//
-//                                        try {
-//                                            bnd = future.getResult();
-//                                            mAuthToken = bnd.getString(AccountManager.KEY_AUTHTOKEN);
-//                                            mUserName  = bnd.getString(AccountManager.KEY_ACCOUNT_NAME);
-//                                            mRefreshToken = mAccountManager.getUserData(accountArray[0], "RefreshToken");
-//                                        } catch (Exception e) {
-//                                            e.printStackTrace();
-//
-//                                            showMessage(e.getMessage());
-//                                        }
-//                                    }
-//                                },
-//                                null
-//                        );
-//            }
+                mTextViewAuthToken.setText("AuthToken: " + authToken + "\nUserName: " + userName);
+                showMessage("AuthToken obtained.");
+            } else {
+                mTextViewAuthToken.setText("No data.");
+                showMessage("Failed to obtained authToken");
+            }
         }
     }
 

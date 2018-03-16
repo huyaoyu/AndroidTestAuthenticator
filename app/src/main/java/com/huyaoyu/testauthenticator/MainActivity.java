@@ -6,6 +6,7 @@ import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.accounts.AuthenticatorException;
 import android.accounts.OperationCanceledException;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +21,7 @@ import java.io.IOException;
 public class MainActivity extends AppCompatActivity {
 
     private AccountManager mAccountManager;
+    private Account mAccount;
     private TextView mTextViewAuthToken;
     private String mAuthToken;
     private String mUserName;
@@ -44,6 +46,28 @@ public class MainActivity extends AppCompatActivity {
         });
 
         mTextViewAuthToken = findViewById(R.id.text_main_auth_token);
+
+        // Find the account.
+        final Account[] accountArray = mAccountManager.getAccountsByType(getResources().getString(R.string.account_type));
+
+        if ( accountArray.length != 0 ) {
+            mAccount = accountArray[0];
+        } else {
+            mAccount = null;
+        }
+
+        findViewById(R.id.button_request_sync).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bundle settings = new Bundle();
+
+                settings.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
+                settings.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
+
+//                ContentResolver.setSyncAutomatically(mAccount, "com.huyaoyu.testauthenticator.provider", true);
+                ContentResolver.requestSync(mAccount, "com.huyaoyu.testauthenticator.provider", settings);
+            }
+        });
     }
 
     private class GetAuthTokenTask extends AsyncTask<Bundle, Void, Bundle> {
